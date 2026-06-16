@@ -1,54 +1,68 @@
 #include <Arduino.h>
-#include "main.h"
-#include "sensor_manager.h"
-#include "measurement_processor.h"
-#include "data_logger.h"
+#include "metal_detector.h"
 
-// Global instances
-SensorManager sensorManager;
-MeasurementProcessor measurementProcessor;
-DataLogger dataLogger;
+// Global metal detector instance
+MetalDetector detector;
 
-// Application variables
-AppState currentState = INITIALIZING;
+// Application settings
+#define SERIAL_BAUD 115200
+#define UPDATE_INTERVAL 500
+
+// Variables
 unsigned long lastUpdateTime = 0;
+float currentWidth = 0;
+float currentLength = 0;
 
 void setup() {
-    // Initialize serial communication
     Serial.begin(SERIAL_BAUD);
     delay(2000);
     
-    // Initialize application
-    initializeApplication();
+    Serial.println("\n=== Metal Detector ===");
+    Serial.println("\nInitializing sensor...");
+    
+    // Initialize detector
+    detector.begin();
+    detector.calibrate();
+    
+    Serial.println("System ready!\n");
 }
 
 void loop() {
     unsigned long currentTime = millis();
     
-    // Handle detection and measurement
+    // Update sensor readings
     if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
         lastUpdateTime = currentTime;
-        handleDetection();
-        displayResults();
+        
+        // Check if metal is detected
+        if (detector.isMetalDetected()) {
+            currentWidth = detector.getWidth();
+            currentLength = detector.getLength();
+            
+            Serial.print("METAL DETECTED! ");
+            Serial.print("Width: ");
+            Serial.print(currentWidth);
+            Serial.print("mm | Length: ");
+            Serial.print(currentLength);
+            Serial.println("mm");
+        }
     }
     
-    // Handle serial commands
+    // Handle serial input
     if (Serial.available()) {
-        char command = Serial.read();
+        char cmd = Serial.read();
         
-        switch (command) {
+        switch(cmd) {
             case 'c':
             case 'C':
-                calibrateSensor();
+                Serial.println("Calibrating...");
+                detector.calibrate();
+                Serial.println("Calibration complete!");
                 break;
             case 'r':
             case 'R':
-                dataLogger.resetLog();
-                Serial.println("Data log reset");
-                break;
-            case 'p':
-            case 'P':
-                dataLogger.printLog();
+                Serial.println("System reset");
+                setup();
                 break;
             default:
                 break;
@@ -56,56 +70,43 @@ void loop() {
     }
 }
 
-void initializeApplication() {
-    Serial.println("\n=== Metal Detector System ===\n");
-    Serial.println("Initializing...\n");
-    
-    // Initialize sensor manager
-    sensorManager.begin();
-    
-    // Initialize data logger
-    dataLogger.begin();
-    
-    // Calibrate sensor
-    calibrateSensor();
-    
-    currentState = DETECTING;
-    Serial.println("System ready!\n");
+// MetalDetector class implementation
+MetalDetector::MetalDetector(int pin) : sensorPin(pin), calibrationValue(0), detectionThreshold(100) {}
+
+void MetalDetector::begin() {
+    pinMode(sensorPin, INPUT);
 }
 
-void handleDetection() {
-    // Read sensor data
-    float sensorValue = sensorManager.readSensor();
-    
-    // Check if metal is detected
-    if (sensorManager.isMetalDetected()) {
-        currentState = MEASURING;
-        
-        // Process measurements
-        MeasurementData measurement = measurementProcessor.processMeasurement(sensorValue);
-        
-        // Log the measurement
-        dataLogger.logMeasurement(measurement);
-        
-        // Return to detecting state
-        currentState = DETECTING;
+float MetalDetector::readSensor() {
+    return analogRead(sensorPin);
+}
+
+void MetalDetector::calibrate() {
+    int sum = 0;
+    for (int i = 0; i < 100; i++) {
+        sum += analogRead(sensorPin);
+        delay(10);
     }
+    calibrationValue = sum / 100.0;
 }
 
-void displayResults() {
-    if (currentState == MEASURING || dataLogger.hasNewData()) {
-        Serial.print("Sensor Value: ");
-        Serial.print(sensorManager.readSensor());
-        Serial.print(" | Width: ");
-        Serial.print(measurementProcessor.getLastWidth());
-        Serial.print("mm | Length: ");
-        Serial.print(measurementProcessor.getLastLength());
-        Serial.println("mm");
-    }
+bool MetalDetector::isMetalDetected() {
+    float currentValue = readSensor();
+    float difference = abs(currentValue - calibrationValue);
+    return difference > detectionThreshold;
 }
 
-void calibrateSensor() {
-    Serial.println("Calibrating sensor...");
-    sensorManager.calibrate();
-    Serial.println("Calibration complete!\n");
+float MetalDetector::getWidth() {
+    float sensorValue = readSensor();
+    return (sensorValue - calibrationValue) * 0.1; // Convert to mm
+}
+
+float MetalDetector::getLength() {
+    // Length calculation based on detection duration
+    // This is a placeholder implementation
+    return 25.5;
+}
+
+void MetalDetector::setThreshold(float value) {
+    detectionThreshold = value;
 }
