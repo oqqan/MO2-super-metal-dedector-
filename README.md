@@ -1,127 +1,86 @@
-# 🔍 MO2 Super Metal Detector
+# Metal Detector - Conveyor Belt Length Measurement
 
-An intelligent metal detection system that identifies and measures moving metallic objects in real-time. This project uses advanced sensor technology to detect the presence, width, and length of metal objects.
+This project measures the length of metal objects on a conveyor belt using 6 infrared sensors.
 
-## 📋 Project Overview
+## Hardware Requirements
 
-The MO2 Super Metal Detector is an embedded system designed to:
-- **Detect moving metals** with high sensitivity
-- **Measure width** of detected metallic objects
-- **Measure length** of detected metallic objects
-- Provide real-time feedback and data processing
+- Arduino UNO (or compatible)
+- 6x Infrared Sensors (analog input)
+- Conveyor Belt
 
-## 🛠️ Hardware
+## Pin Configuration
 
-- **Microcontroller**: Arduino Nano 33 IoT
-  - Built-in wireless connectivity
-  - Compact form factor
-  - Low power consumption
-  
-- **Development Environment**: PlatformIO on Visual Studio Code
-  - Professional-grade embedded development
-  - Integrated build and upload tools
-  - Library management
+| Sensor | Arduino Pin | Position |
+|--------|------------|----------|
+| 1 | A0 | 0 mm |
+| 2 | A1 | 50 mm |
+| 3 | A2 | 100 mm |
+| 4 | A3 | 150 mm |
+| 5 | A4 | 200 mm |
+| 6 | A5 | 250 mm |
 
-## 📦 Technology Stack
-
-- **Platform**: Arduino (C/C++)
-- **IDE**: Visual Studio Code + PlatformIO
-- **Hardware**: Arduino Nano 33 IoT
-- **Sensors**: Metal detection sensors
-
-## 🚀 Getting Started
+## Installation
 
 ### Prerequisites
-- Visual Studio Code
-- PlatformIO extension for VS Code
-- Arduino Nano 33 IoT board
-- USB cable for programming and power
+- [Visual Studio Code](https://code.visualstudio.com/)
+- [PlatformIO Extension](https://platformio.org/install/ide?install=vscode)
 
-### Installation
+### Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/oqqan/MO2-super-metal-dedector-.git
-   cd MO2-super-metal-dedector-
-   ```
+1. Open the project folder in VS Code
+2. PlatformIO will automatically detect `platformio.ini`
+3. Adjust the following in `platformio.ini`:
+   - `upload_port`: Your Arduino COM port (e.g., COM3, /dev/ttyUSB0)
+   - `monitor_port`: Same as upload_port
+   - `board`: Change if using different Arduino model
 
-2. **Open in Visual Studio Code**
-   - Open the project folder in VS Code
-   - PlatformIO should automatically detect the project structure
+## Usage
 
-3. **Configure your board**
-   - Update `platformio.ini` with your board settings if needed
-   - Ensure Arduino Nano 33 IoT is selected as the target
-
-4. **Build and Upload**
-   - Press `Ctrl+Alt+B` to build
-   - Press `Ctrl+Alt+U` to upload to your board
-
-## 📊 Features
-
-✅ Real-time metal detection
-✅ Width measurement of detected objects
-✅ Length measurement of detected objects
-✅ Low latency response
-✅ Arduino Nano 33 IoT integration
-
-## 📝 Usage
-
-Once uploaded to your Arduino Nano 33 IoT:
-
-1. Power on the device
-2. The detector will begin monitoring for metallic objects
-3. When metal is detected, measurements will be recorded
-4. Data can be viewed via serial monitor or transmitted wirelessly
-
-## 📂 Project Structure
-
-```
-MO2-super-metal-dedector-/
-├── src/
-│   └── main.cpp          # Main application code
-├── include/              # Header files
-├── platformio.ini        # PlatformIO configuration
-└── README.md            # This file
+### Building
+```bash
+PlatformIO: Build (Ctrl+Alt+B)
 ```
 
-## 🔧 Configuration
+### Uploading to Arduino
+```bash
+PlatformIO: Upload (Ctrl+Alt+U)
+```
 
-Edit `platformio.ini` to configure:
-- Target board settings
-- Serial monitor speed
-- Build options
-- Library dependencies
+### Serial Monitor
+```bash
+PlatformIO: Monitor (Ctrl+Alt+M)
+```
 
-## 📚 Dependencies
+## Commands
 
-All required libraries are managed through PlatformIO and defined in `platformio.ini`.
+- `c` or `C`: Recalibrate all sensors
+- `r` or `R`: Reset system
 
-## 🤝 Contributing
+## Output
 
-Contributions are welcome! Feel free to:
-- Report bugs and issues
-- Suggest improvements
-- Submit pull requests
+The system outputs only the measured metal length:
+```
+Length: 45.8 mm
+```
 
-## 📄 License
+## Configuration
 
-[Add your license here]
+Edit `src/main.cpp` to adjust:
 
-## 📞 Support
+- **DETECTION_THRESHOLD**: Sensor sensitivity (default: 100)
+- **CONVEYOR_SPEED**: mm per millisecond (adjust based on actual belt speed)
+- **UPDATE_INTERVAL**: Polling interval in milliseconds (default: 50ms)
+- **Sensor positions**: Change the position values in `setSensorPin()` calls
 
-For issues or questions about this project, please open an issue on GitHub.
+## Calibration
 
-## 🎯 Future Enhancements
+1. Power on the system
+2. Send `c` command via serial monitor
+3. System will read baseline values from all sensors
+4. Ready to measure
 
-- [ ] Cloud data logging
-- [ ] Mobile app integration
-- [ ] Improved accuracy algorithms
-- [ ] Multi-sensor arrays
-- [ ] Energy optimization
+## Troubleshooting
 
----
-
-**Status**: Active Development 🚀
-
-Last Updated: June 2026
+- **No measurements**: Check sensor connections and calibration
+- **Inaccurate length**: Adjust `DETECTION_THRESHOLD` or sensor positions
+- **Serial issues**: Verify COM port in platformio.ini matches your device
