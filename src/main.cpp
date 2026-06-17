@@ -1,30 +1,70 @@
 #include <Arduino.h>
 #include "metal_detector.h"
 
-// Global metal detector instance
-MetalDetector detector;
+// ============ ARDUINO PIN CONFIGURATION ============
+#define SENSOR_PIN_1 A0        // First metal detector sensor
+#define SENSOR_PIN_2 A1        // Second metal detector sensor
+#define SENSOR_PIN_3 A2        // Third metal detector sensor
 
-// Application settings
+// ============ THRESHOLD CONFIGURATION ============
+#define THRESHOLD_VALUE_1 100   // Threshold for detector 1
+#define THRESHOLD_VALUE_2 100   // Threshold for detector 2
+#define THRESHOLD_VALUE_3 100   // Threshold for detector 3
+
+// ============ APPLICATION SETTINGS ============
 #define SERIAL_BAUD 115200
-#define UPDATE_INTERVAL 500
+#define UPDATE_INTERVAL 100     // milliseconds
 
-// Variables
+// ============ GLOBAL VARIABLES ============
+MetalDetector detector1(SENSOR_PIN_1);
+MetalDetector detector2(SENSOR_PIN_2);
+MetalDetector detector3(SENSOR_PIN_3);
+
 unsigned long lastUpdateTime = 0;
-float currentWidth = 0;
-float currentLength = 0;
 
 void setup() {
     Serial.begin(SERIAL_BAUD);
     delay(2000);
     
-    Serial.println("\n=== Metal Detector ===");
-    Serial.println("\nInitializing sensor...");
+    Serial.println("\n========================================");
+    Serial.println("===    Metal Detector System v1.0    ===");
+    Serial.println("========================================\n");
     
-    // Initialize detector
-    detector.begin();
-    detector.calibrate();
+    // Initialize all detectors
+    Serial.println("[*] Initializing detectors...");
+    detector1.begin();
+    detector2.begin();
+    detector3.begin();
+    Serial.println("[+] All sensors initialized\n");
     
-    Serial.println("System ready!\n");
+    // Set threshold values
+    Serial.println("[*] Setting threshold values...");
+    detector1.setThreshold(THRESHOLD_VALUE_1);
+    detector2.setThreshold(THRESHOLD_VALUE_2);
+    detector3.setThreshold(THRESHOLD_VALUE_3);
+    Serial.print("[+] Detector 1 threshold: ");
+    Serial.println(THRESHOLD_VALUE_1);
+    Serial.print("[+] Detector 2 threshold: ");
+    Serial.println(THRESHOLD_VALUE_2);
+    Serial.print("[+] Detector 3 threshold: ");
+    Serial.println(THRESHOLD_VALUE_3);
+    Serial.println();
+    
+    // Calibrate all detectors
+    Serial.println("[*] Calibrating all detectors...");
+    Serial.print("    Calibrating detector 1... ");
+    detector1.calibrate();
+    Serial.println("OK");
+    
+    Serial.print("    Calibrating detector 2... ");
+    detector2.calibrate();
+    Serial.println("OK");
+    
+    Serial.print("    Calibrating detector 3... ");
+    detector3.calibrate();
+    Serial.println("OK");
+    
+    Serial.println("\n[+] System ready!\n");
 }
 
 void loop() {
@@ -34,79 +74,68 @@ void loop() {
     if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
         lastUpdateTime = currentTime;
         
-        // Check if metal is detected
-        if (detector.isMetalDetected()) {
-            currentWidth = detector.getWidth();
-            currentLength = detector.getLength();
-            
-            Serial.print("METAL DETECTED! ");
-            Serial.print("Width: ");
-            Serial.print(currentWidth);
-            Serial.print("mm | Length: ");
-            Serial.print(currentLength);
-            Serial.println("mm");
-        }
+        // Process all detectors
+        float reading1 = detector1.readSensor();
+        float reading2 = detector2.readSensor();
+        float reading3 = detector3.readSensor();
+        
+        detector1.processReading(reading1);
+        detector2.processReading(reading2);
+        detector3.processReading(reading3);
     }
     
-    // Handle serial input
+    // Handle serial input for commands
     if (Serial.available()) {
         char cmd = Serial.read();
         
         switch(cmd) {
             case 'c':
             case 'C':
-                Serial.println("Calibrating...");
-                detector.calibrate();
-                Serial.println("Calibration complete!");
+                Serial.println("\n[*] Recalibrating all detectors...");
+                detector1.calibrate();
+                detector2.calibrate();
+                detector3.calibrate();
+                Serial.println("[+] Calibration complete!\n");
                 break;
+                
             case 'r':
             case 'R':
-                Serial.println("System reset");
+                Serial.println("\n[*] System reset...");
                 setup();
                 break;
+                
+            case 's':
+            case 'S':
+                Serial.println("\n========== SYSTEM STATUS ==========");
+                Serial.print("Detector 1 - Threshold: ");
+                Serial.print(THRESHOLD_VALUE_1);
+                Serial.print(", Collecting: ");
+                Serial.println(detector1.isCurrentlyCollecting() ? "YES" : "NO");
+                
+                Serial.print("Detector 2 - Threshold: ");
+                Serial.print(THRESHOLD_VALUE_2);
+                Serial.print(", Collecting: ");
+                Serial.println(detector2.isCurrentlyCollecting() ? "YES" : "NO");
+                
+                Serial.print("Detector 3 - Threshold: ");
+                Serial.print(THRESHOLD_VALUE_3);
+                Serial.print(", Collecting: ");
+                Serial.println(detector3.isCurrentlyCollecting() ? "YES" : "NO");
+                Serial.println("===================================\n");
+                break;
+                
+            case 'h':
+            case 'H':
+                Serial.println("\n========== COMMANDS ==========");
+                Serial.println("c/C - Recalibrate detectors");
+                Serial.println("r/R - Reset system");
+                Serial.println("s/S - Show status");
+                Serial.println("h/H - Show help");
+                Serial.println("=============================\n");
+                break;
+                
             default:
                 break;
         }
     }
-}
-
-// MetalDetector class implementation
-MetalDetector::MetalDetector(int pin) : sensorPin(pin), calibrationValue(0), detectionThreshold(100) {}
-
-void MetalDetector::begin() {
-    pinMode(sensorPin, INPUT);
-}
-
-float MetalDetector::readSensor() {
-    return analogRead(sensorPin);
-}
-
-void MetalDetector::calibrate() {
-    int sum = 0;
-    for (int i = 0; i < 100; i++) {
-        sum += analogRead(sensorPin);
-        delay(10);
-    }
-    calibrationValue = sum / 100.0;
-}
-
-bool MetalDetector::isMetalDetected() {
-    float currentValue = readSensor();
-    float difference = abs(currentValue - calibrationValue);
-    return difference > detectionThreshold;
-}
-
-float MetalDetector::getWidth() {
-    float sensorValue = readSensor();
-    return (sensorValue - calibrationValue) * 0.1; // Convert to mm
-}
-
-float MetalDetector::getLength() {
-    // Length calculation based on detection duration
-    // This is a placeholder implementation
-    return 25.5;
-}
-
-void MetalDetector::setThreshold(float value) {
-    detectionThreshold = value;
 }
