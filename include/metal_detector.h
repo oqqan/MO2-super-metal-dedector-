@@ -3,52 +3,64 @@
 
 #include <Arduino.h>
 
+// Number of sensors
+#define NUM_SENSORS 6
+
+// Sensor configuration
+struct SensorConfig {
+    int pin;
+    float position;      // Position on conveyor in mm
+    bool isActive;
+};
+
+// Detection event structure
+struct DetectionEvent {
+    int sensorId;
+    unsigned long timestamp;
+    float sensorValue;
+};
+
 class MetalDetector {
 private:
-    int sensorPin;
-    float calibrationValue;
+    SensorConfig sensors[NUM_SENSORS];
+    float calibrationValues[NUM_SENSORS];
     float detectionThreshold;
     
-    // Dynamic data collection
-    float* signalBuffer;        // Dynamic array
-    int bufferCapacity;         // Max size
-    int bufferSize;             // Current size
-    bool isCollecting;          // Collection state
+    // Detection tracking
+    DetectionEvent events[NUM_SENSORS];
+    int eventCount;
+    bool isDetecting;
+    unsigned long detectionStartTime;
     
-    void expandBuffer();        // Helper to resize
+    // Results
+    float metalLength;
+    float conveyorSpeed;  // mm per millisecond
+    
+    void analyzeDetection();
     
 public:
-    MetalDetector(int pin = A0);
-    ~MetalDetector();           // Destructor for cleanup
+    MetalDetector();
+    ~MetalDetector();
     
-    // Initialize detector
+    // Setup and calibration
     void begin();
-    
-    // Read sensor value
-    float readSensor();
-    
-    // Calibrate the detector
+    void setSensorPin(int sensorId, int pin, float position);
     void calibrate();
-    
-    // Check if metal is detected
-    bool isMetalDetected();
-    
-    // Get width measurement
-    float getWidth();
-    
-    // Get length measurement
-    float getLength();
-    
-    // Set detection threshold
     void setThreshold(float value);
+    void setConveyorSpeed(float speed);
     
-    // Data collection methods
-    void processReading(float value);   // Main processing
-    void getCollectedData(float*& data, int& size); // Return collected data
-    void clearBuffer();                 // Reset buffer
+    // Read and process
+    void readAllSensors();
+    void processReading(int sensorId, float value);
     
-    // Get collection status
-    bool isCurrentlyCollecting();
+    // Get results
+    float getMetalLength();
+    int getDetectedSensorCount();
+    void printDetectionData();
+    
+    // Utility
+    bool isCurrentlyDetecting();
+    void resetDetection();
 };
 
 #endif // METAL_DETECTOR_H
